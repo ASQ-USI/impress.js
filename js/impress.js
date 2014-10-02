@@ -1,10 +1,11 @@
 /**
- * impress.js
+ * asq fork of impress.js
  *
  * impress.js is a presentation tool based on the power of CSS3 transforms and transitions
  * in modern browsers and inspired by the idea behind prezi.com.
  *
  *
+ * Original work by:
  * Copyright 2011-2012 Bartek Szopka (@bartaz)
  *
  * Released under the MIT and GPL Licenses.
@@ -14,6 +15,16 @@
  *  version: 0.5.3
  *  url:     http://bartaz.github.com/impress.js/
  *  source:  http://github.com/bartaz/impress.js/
+ * 
+ * ASQ modificatoions:
+ * Copyright 2011-2012 Bartek Szopka (@bartaz)
+ *
+ * Released under the MIT and GPL Licenses.
+ *
+ * ------------------------------------------------
+ *  author:  Vasileios Triglianos
+ *  version: 0.0.1
+ *  source:  http://github.com/ASQ-USI/impress.js/
  */
 
 /*jshint bitwise:true, curly:true, eqeqeq:true, forin:true, latedef:true, newcap:true,

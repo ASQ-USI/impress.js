@@ -32,6 +32,9 @@
 
     // It defines the names of each entry by the id capitalized.
     var showMenu = function() {
+        // we don't want the preview thumbnails to have menus
+        if ( window.location.search.match(/preview/) ) return;
+
         // Create the menu wrapper and the element that will be cloned
         // for each entry.
         var menu = document.createElement('div'),
