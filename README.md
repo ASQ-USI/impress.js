@@ -23,6 +23,11 @@ Sorry.
 Fortunately there are some guys on GitHub that got quite excited with the idea of building
 editing tool for impress.js. Let's hope they will manage to do it.
 
+Extra features of ASQ fork
+------------------------
+* substeps
+* menu (inlude `plugin/menu.js` and call impress().showMenu())
+* ability to press space and arrows in input fields
 
 
 EXAMPLES AND OTHER LEARNING RESOURCES

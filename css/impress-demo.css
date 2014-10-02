@@ -199,6 +199,45 @@ a:focus {
 .impress-enabled .step.active { opacity: 1 }
 
 /*
+    Substep styling...
+*/
+.substep {
+    opacity: 0;
+    -webkit-transition: opacity 0.5s;
+    -moz-transition:    opacity 0.5s;
+    -ms-transition:     opacity 0.5s;
+    -o-transition:      opacity 0.5s;
+    transition:         opacity 0.5s;
+}
+
+.substep.active {
+    opacity: 1;
+}
+
+.substep.previous {
+    opacity: 0.75;
+}
+
+/* 
+    menu for steps
+*/
+
+.menu {position: absolute; bottom: 0;}
+.menu-item {
+    font-size:0.7em;
+    display:inline;
+    opacity:0.25;
+    padding: 0 3px;
+}
+.menu-item a {
+    padding: 0 3px;
+}
+.menu-item:target {text-decoration: underline}
+.menu-button iframe {width:200px; height:200px; }
+.menu-item.past {opacity:0.5}
+.menu-item.present {opacity:1}
+
+/*
     These 'slide' step styles were heavily inspired by HTML5 Slides:
     http://html5slides.googlecode.com/svn/trunk/styles.css
 

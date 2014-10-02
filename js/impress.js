@@ -419,13 +419,45 @@
         var stepEnterTimeout = null;
         
         // `goto` API function that moves to step given with `el` parameter (by index, id or element),
-        // with a transition `duration` optionally given as second parameter.
-        var goto = function ( el, duration ) {
+        // moves to substep given with subIdx (by index),
+        // with a transition `duration` optionally given as a third parameter.
+        var goto = function ( el, subIdx, duration ) {
+            if((el === null || el === undefined)){
+                if((subIdx === null || subIdx === undefined || isNaN(subIdx))){
+                    return false;
+                }
+                // we have only substep handle it now
+                gotoSub(activeStep ,subIdx);
+            }
             
             if ( !initialized || !(el = getStep(el)) ) {
                 // presentation not initialized or given element is not a step
                 return false;
             }
+
+            var haveToGoToSubstep =false;
+            if(activeStep !== el){
+                // Since we're going to transition to a  new step make sure that the previous
+                // and next steps have their substeps right, in case they are next :-)
+                var prev = steps.indexOf( el ) - 1;
+                prev = prev >= 0 ? steps[ prev ] : steps[ steps.length-1 ];
+                setActiveAllSubs(prev);
+
+                var next = steps.indexOf( el ) + 1;
+                next = next < steps.length ? steps[ next ] : steps[ 0 ];
+                clearAllSubs(next);
+
+                // we will handle substep after we transition to the step
+            
+                if((subIdx !== null && subIdx !== undefined || isNaN(subIdx))){
+                    haveToGoToSubstep = true;
+                }
+            }else{
+                // we have are on desired step already handle substep now
+                gotoSub(activeStep ,subIdx);
+            }
+
+            
             
             // Sometimes it's possible to trigger focus on first link with some keyboard action.
             // Browser in such a case tries to scroll the page to make this element visible
@@ -543,6 +575,9 @@
             window.clearTimeout(stepEnterTimeout);
             stepEnterTimeout = window.setTimeout(function() {
                 onStepEnter(activeStep);
+
+                //go to substep if we have to
+                if(haveToGoToSubstep) gotoSub(activeStep, subIdx);
             }, duration + delay);
             
             return el;
@@ -563,6 +598,182 @@
             
             return goto(next);
         };
+                
+        //PATCH for SUBSTEPS
+        var forEach = Array.prototype.forEach,
+            slice = Array.prototype.slice,
+            isArray = Array.isArray;
+                
+        var removeClass = function (elm, className) {
+            if (elm.classList) {
+                elm.classList.remove(className);
+            } else {
+                if (!elm || !elm.className) {
+                    return false;
+                }
+                var regexp = new RegExp("(^|\\s)" + className + "(\\s|$)", "g");
+                elm.className = elm.className.replace(regexp, "$2");
+            }
+        }
+            
+        var setPrevious = function (data) {
+            if (isArray(data)) {
+                data.forEach(setPrevious);
+                return;
+            }
+            data.classList.remove('active');
+            data.classList.add('previous');
+        };
+
+        var setActive = function (data) {
+            if (isArray(data)) {
+                data.forEach(setActive);
+                return;
+            }
+            data.classList.remove('previous');
+            data.classList.add('active');
+        };
+
+        var setActiveAllSubs = function (step){
+            if (!step.subSteps) {
+                setSubSteps(step);
+            }
+            if (step.subSteps.length 
+                    && (step.subSteps.active !== (step.subSteps.length - 1))) {
+
+                slice.call(step.subSteps, 0, -1).forEach(setPrevious);
+                setActive(step.subSteps[step.subSteps.length - 1]);
+            }
+        }
+
+        var clearSub = function (data) {
+            if (isArray(data)) {
+                data.forEach(clearSub);
+                return;
+            }
+            data.classList.remove('active');
+            data.classList.remove('previous');
+        };
+
+        var clearAllSubs = function (step){
+            if (!step.subSteps) {
+                setSubSteps(step);
+            }
+            if (step.subSteps.length && (step.subSteps.active !== 0)) {
+                forEach.call(step.subSteps, clearSub);
+            }
+        }
+
+        // `gotoSub` API function that moves to substep given with `index` parameter.
+        var gotoSub = function(el, index){
+
+            if ( !initialized || !(el = getStep(el)) ) {
+                // presentation not initialized or given element is not a step
+                return false;
+            }            
+            
+            if (!el.subSteps) {
+                setSubSteps(el);
+            }
+            var subSteps = el.subSteps;
+
+            if (subSteps.length && (index >= -1) && (index <= (subSteps.length - 1))) {
+
+                // set previous substeps to have the class 'previous'
+                if(index){
+                    slice.call(subSteps, 0, index).forEach(setPrevious);
+                }
+
+                // clear next subSteps
+                if(index < (subSteps.length - 1) ){
+                    var start = (index > -1) ? index : 0;
+                    slice.call(subSteps, start).forEach(clearSub);
+                }
+                
+                // set el
+                if(index > -1){
+                    setActive(subSteps[index]);
+                }
+                subSteps.active = index;
+            }
+        };
+
+        
+        var next = function () {
+            var active = activeStep;
+            
+            var subactive, next, subSteps;
+            
+            if (!active.subSteps) {
+                setSubSteps(active);
+            }
+            subSteps = active.subSteps;
+
+            // if we have substeps deal with them first
+            if (subSteps.length && ((subactive = subSteps.active) !== (subSteps.length - 1))) {
+                if(isNaN(subactive) || (subactive==null)){
+                    subactive = -1;
+                }
+                return goto(null, ++subactive)
+            }
+
+            // no substeps or substeps are over. Go to the next step
+            next = steps.indexOf( active ) + 1;
+            next = next < steps.length ? steps[ next ] : steps[ 0 ];
+
+            return goto(next, -1);
+        };
+        
+        var prev = function () {
+            var active = activeStep;
+            
+            var subactive, prev, subSteps;
+            if (!active.subSteps) {
+                setSubSteps(active);
+            }
+            subSteps = active.subSteps;
+            //if we have substeps deal with them first
+            if (subSteps.length && ((subactive = subSteps.active) || (subactive === 0))) {
+                if (subactive >=0) {
+                    --subactive;
+                    return goto(null, subactive)
+                }
+            }
+
+            //no substeps or we are at the first substep. Go to the previous step
+            prev = steps.indexOf( active ) - 1;
+            prev = prev >= 0 ? steps[ prev ] : steps[ steps.length-1 ];
+
+            //prev.subSteps will be populated from the goto that lead to the current element
+            return goto(prev, (prev.subSteps.length -1));
+        };
+         
+        var setSubSteps = function (el) {
+            var steps = el.querySelectorAll(".substep"),
+            order = [], unordered = [];
+            forEach.call(steps, function (el) {
+                if (el.dataset) {
+                    var index = Number(el.dataset.order);
+                    
+                    if (!isNaN(index)) {
+                        if (!order[index]) {
+                            order[index] = el;
+                        } else if (Array.isArray(order[index])) {
+                            order[index].push(el);
+                        } else {
+                            order[index] = [order[index], el];
+                        }
+                    } else {
+                        unordered.push(el);
+                    } 
+                } else {
+                   unordered.push(el);
+                }
+            });
+            el.subSteps = order.filter(Boolean).concat(unordered);
+        };
+         
+        //END PATCH       
         
         // Adding some useful classes to step elements.
         //
@@ -580,21 +791,39 @@
         root.addEventListener("impress:init", function(){
             // STEP CLASSES
             steps.forEach(function (step) {
-                step.classList.add("future");
+               step.classList.add("future");
             });
-            
+
             root.addEventListener("impress:stepenter", function (event) {
-                event.target.classList.remove("past");
-                event.target.classList.remove("future");
-                event.target.classList.add("present");
+               event.target.classList.remove("past");
+               event.target.classList.remove("future");
+               event.target.classList.add("present");
             }, false);
-            
+
             root.addEventListener("impress:stepleave", function (event) {
-                event.target.classList.remove("present");
-                event.target.classList.add("past");
+               event.target.classList.remove("present");
+               event.target.classList.add("past");
             }, false);
-            
+           
         }, false);
+        // root.addEventListener("impress:init", function(){
+        //     // STEP CLASSES
+        //     steps.forEach(function (step) {
+        //         _addClass(step,"future");
+        //     });
+            
+        //     root.addEventListener("impress:stepenter", function (event) {
+        //         _addClass(event.target,"present");
+        //         _removeClass(event.target,"past");
+        //         _removeClass(event.target,"future");
+        //     }, false);
+            
+        //     root.addEventListener("impress:stepleave", function (event) {
+        //         _removeClass(event.target,"present");
+        //         _addClass(event.target,"past"); 
+        //     }, false);
+            
+        // }, false);
         
         // Adding hash change support.
         root.addEventListener("impress:init", function(){
@@ -625,7 +854,7 @@
             
             // START 
             // by selecting step defined in url or first step of the presentation
-            goto(getElementFromHash() || steps[0], 0);
+            goto(getElementFromHash() || steps[0], null, 0);
         }, false);
         
         body.classList.add("impress-disabled");
@@ -635,13 +864,17 @@
             init: init,
             goto: goto,
             next: next,
-            prev: prev
+            prev: prev,
+            gotoSub : gotoSub,
+            // showMenu: showMenu
         });
 
     };
     
     // flag that can be used in JS to check if browser have passed the support test
     impress.supported = impressSupported;
+
+    triggerEvent(document, "impress:ready");
     
 })(document, window);
 
@@ -681,8 +914,10 @@
         
         // Prevent default keydown action when one of supported key is pressed.
         document.addEventListener("keydown", function ( event ) {
-            if ( event.keyCode === 9 || ( event.keyCode >= 32 && event.keyCode <= 34 ) || (event.keyCode >= 37 && event.keyCode <= 40) ) {
-                event.preventDefault();
+            if(event.target == document.body){
+                if ( event.keyCode === 9 || ( event.keyCode >= 32 && event.keyCode <= 34 ) || (event.keyCode >= 37 && event.keyCode <= 40) ) {
+                    event.preventDefault();
+                }
             }
         }, false);
         
@@ -702,23 +937,25 @@
         //   as another way to moving to next step... And yes, I know that for the sake of
         //   consistency I should add [shift+tab] as opposite action...
         document.addEventListener("keyup", function ( event ) {
-            if ( event.keyCode === 9 || ( event.keyCode >= 32 && event.keyCode <= 34 ) || (event.keyCode >= 37 && event.keyCode <= 40) ) {
-                switch( event.keyCode ) {
-                    case 33: // pg up
-                    case 37: // left
-                    case 38: // up
-                             api.prev();
-                             break;
-                    case 9:  // tab
-                    case 32: // space
-                    case 34: // pg down
-                    case 39: // right
-                    case 40: // down
-                             api.next();
-                             break;
+            if(event.target == document.body){
+                if ( event.keyCode === 9 || ( event.keyCode >= 32 && event.keyCode <= 34 ) || (event.keyCode >= 37 && event.keyCode <= 40) ) {
+                    switch( event.keyCode ) {
+                        case 33: // pg up
+                        case 37: // left
+                        case 38: // up
+                                 api.prev();
+                                 break;
+                        case 9:  // tab
+                        case 32: // space
+                        case 34: // pg down
+                        case 39: // right
+                        case 40: // down
+                                 api.next();
+                                 break;
+                    }
+                    
+                    event.preventDefault();
                 }
-                
-                event.preventDefault();
             }
         }, false);
         
@@ -784,7 +1021,7 @@
         // rescale presentation when window is resized
         window.addEventListener("resize", throttle(function () {
             // force going to active step again, to trigger rescaling
-            api.goto( document.querySelector(".step.active"), 500 );
+            api.goto( document.querySelector(".step.active"), null,  500 );
         }, 250), false);
         
     }, false);
