@@ -465,11 +465,10 @@
                 if((subIdx !== null && subIdx !== undefined || isNaN(subIdx))){
                     haveToGoToSubstep = true;
                 }
-            }else{
+            }else if(parseInt(subIdx)){
                 // we have are on desired step already handle substep now
                 gotoSub(activeStep ,subIdx);
             }
-
             
             
             // Sometimes it's possible to trigger focus on first link with some keyboard action.
